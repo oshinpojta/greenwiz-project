@@ -110,22 +110,24 @@ if(URL_HOST.startsWith('https://')){
 
 async function getImageLink($){
     try {
-        let imgTagList = $('img');
+        let imgTagList = $('img');      //grabbing 'img' tag from cheerio HTML object
         let imgLinkArr = [];
-        let imgSet = new Set();
+        let imgSet = new Set();         //using set to keep the links unique
         for(let i=0;i<imgTagList.length;i++){
-            let imgLink = imgTagList[i].attribs.src;
+            let imgLink = imgTagList[i].attribs.src;    // grabbing 'src' attribute of img-tag
             if(imgLink){
-                imgSet.add(imgLink);
+                imgSet.add(imgLink);    //if image-link not null or undefined, add it to the set
             }
         }
         imgLinkArr = [...imgSet];
         for(let i=0;i<imgLinkArr.length;i++){
             let imglink = imgLinkArr[i];
+
+            //verifying if the img link ends with these extensions, if not it might be using a query, then split it using '?' and return index-[0] of the array
             if(!imglink.endsWith('.jpg') || !imglink.endsWith('.png') || !imglink.endsWith('.jpeg') || !imglink.endsWith('.svg') || !imglink.endsWith('.ico') || !imglink.endsWith('.bmp') ){
-                imglink = imglink.split('?')[0];
+                imglink = imglink.split('?')[0];    
             }
-            let r = await downloadImage(imglink);
+            let r = await downloadImage(imglink); //passing image downloading link to downloadImage()
             console.log("Image Downloaded @ ", r);
         }
 
@@ -136,7 +138,7 @@ async function getImageLink($){
     } catch (error) {
         console.log('Get Image Link Function Error')
         console.log(error);
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {  // resolve false if error, but don't halt the execution of the program
             resolve(false);
         })
     }
@@ -144,38 +146,39 @@ async function getImageLink($){
 
 async function downloadImage(url){
     try{
-        let startIndex = url.search('/');
-        if(startIndex==0){
+        if(url.startsWith('/')){  //if img link starts with '/' then add https else download it as it is. (required for situations like in wikipedia where img-links -> //upload/static/..)
             url = `https:${url}`;
         }
         console.log(url);
         let urlArray = url.split('/');
-        let imagesDir = path.join(__dirname,'images');
-        if(!fs.existsSync(imagesDir)){
+        let imagesDir = path.join(__dirname,'images'); //set a path for images folder
+        if(!fs.existsSync(imagesDir)){  // create folder if not exists
             fs.mkdirSync(imagesDir);
         }
         let hostname = URL_HOST;
-        
-        let websiteDir = path.join(imagesDir,`${hostname}`);
-        if(!fs.existsSync(websiteDir)){
+
+        let websiteDir = path.join(imagesDir,`${hostname}`); //set a path for current host name and make a folder as hostname to download images in it
+        if(!fs.existsSync(websiteDir)){                     // create folder if not exists
             fs.mkdirSync(websiteDir);
         }
-        let fileName = urlArray[urlArray.length-1];
-        let filepath = path.join(websiteDir,`${fileName}`);
-        let downloadResponse = await axios({
+        let fileName = urlArray[urlArray.length-1];        //get last name of the images by using split in img-link and that is its filename
+        let filepath = path.join(websiteDir,`${fileName}`);     //creating file path, by appending website's directory path and image's name
+        let downloadResponse = await axios({    // getting download respons in binary data
             url : url,
             method : 'GET',
             responseType : 'stream'
         });
-        return new Promise((resolve, reject) => {
-            downloadResponse.data.pipe(fs.createWriteStream(filepath, { flags : 'w+'})).on('error', reject).once('close',() => resolve(filepath))
+        return new Promise((resolve, reject) => {   //creating a promise to let the calling function wait for its download before executing next one
+            downloadResponse.data.pipe(fs.createWriteStream(filepath, { flags : 'w+'})) //creating a writeStream to write image to a file and return resolved response with filepath 
+                .on('error', reject)
+                .once('close',() => resolve(filepath))
         }) ;
 
     }catch(error){
         console.log("Download Image Function Error")
         console.log(error);
         return new Promise((resolve, reject) => {
-            resolve(null);
+            resolve(null);      //if error resolve null instead of filepath
         }) ;
     }
     
